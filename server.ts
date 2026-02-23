@@ -244,6 +244,7 @@ app.get("/api/tests/history", authenticate, async (req: any, res) => {
   const history = await db.collection('test_attempts')
     .find({ user_id: req.user.id })
     .sort({ date: -1 })
+    .limit(100)
     .toArray();
   
   res.json(history);
@@ -312,6 +313,7 @@ app.post("/api/bookmarks", authenticate, async (req: any, res) => {
 app.get("/api/bookmarks", authenticate, async (req: any, res) => {
   const bookmarks = await db.collection('bookmarks')
     .find({ user_id: req.user.id })
+    .limit(200)
     .toArray();
   
   res.json(bookmarks);
