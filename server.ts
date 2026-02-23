@@ -1,5 +1,4 @@
 import express from "express";
-import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
 import { createClient } from "@supabase/supabase-js";
@@ -16,10 +15,6 @@ const __dirname = path.dirname(__filename);
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!supabaseUrl || !supabaseKey) {
-  console.warn("SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is missing from environment variables.");
-}
 
 const db = createClient(supabaseUrl || "", supabaseKey || "");
 
@@ -357,9 +352,11 @@ app.get("/api/admin/static-count", async (req, res) => {
 // Vite Setup
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
+    // Dynamically import Vite only in development to keep production bundle small
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
-      appType: "spa", // Let Vite handle index.html in dev mode
+      appType: "spa",
     });
     app.use(vite.middlewares);
   } else {
@@ -371,7 +368,7 @@ async function startServer() {
   }
 
   if (process.env.IS_NETLIFY !== "true") {
-    const PORT = 3000;
+    const PORT = Number(process.env.PORT) || 3000;
     app.listen(PORT, "0.0.0.0", () => {
       console.log(`Server running on http://localhost:${PORT}`);
     });
