@@ -370,7 +370,7 @@ async function startServer() {
     });
   }
 
-  if (process.env.NETLIFY !== "true") {
+  if (process.env.IS_NETLIFY !== "true") {
     const PORT = 3000;
     app.listen(PORT, "0.0.0.0", () => {
       console.log(`Server running on http://localhost:${PORT}`);
@@ -379,7 +379,7 @@ async function startServer() {
 }
 
 // Only start the server if not running on Netlify (for local dev)
-if (process.env.NETLIFY !== "true") {
+if (process.env.IS_NETLIFY !== "true") {
   startServer();
 }
 
