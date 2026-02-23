@@ -17,6 +17,7 @@ export default defineConfig(({mode}) => {
     },
     optimizeDeps: {
       include: ['react-is'],
+      exclude: ['recharts'],
     },
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
