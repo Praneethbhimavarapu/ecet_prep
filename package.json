@@ -24,6 +24,7 @@
     "date-fns": "^4.1.0",
     "dotenv": "^17.2.3",
     "express": "^4.21.2",
+    "groq-sdk": "^0.37.0",
     "jsonwebtoken": "^9.0.3",
     "lodash-es": "^4.17.23",
     "lucide-react": "^0.546.0",
