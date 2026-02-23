@@ -7,6 +7,7 @@ import TestEnvironment from './components/TestEnvironment';
 import AnalyticsView from './components/AnalyticsView';
 import LandingPage from './components/LandingPage';
 import BookmarksPage from './components/BookmarksPage';
+import QuestionBankGenerator from './components/QuestionBankGenerator';
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -37,15 +38,16 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
+      <div className="min-h-screen bg-black text-white font-sans selection:bg-indigo-500 selection:text-white">
         <Navbar user={user} onLogout={handleLogout} onLogin={handleLogin} />
-        <main className="max-w-7xl mx-auto px-4 py-8">
+        <main className="max-w-7xl mx-auto px-4 py-12 sm:px-6 lg:px-8">
           <Routes>
             <Route path="/" element={user ? <Navigate to="/dashboard" /> : <LandingPage onLogin={handleLogin} />} />
             <Route path="/dashboard" element={user ? <Dashboard user={user} /> : <Navigate to="/" />} />
             <Route path="/test/:type/:subject?" element={user ? <TestEnvironment /> : <Navigate to="/" />} />
             <Route path="/analytics" element={user ? <AnalyticsView /> : <Navigate to="/" />} />
             <Route path="/bookmarks" element={user ? <BookmarksPage /> : <Navigate to="/" />} />
+            <Route path="/admin/generator" element={user ? <QuestionBankGenerator /> : <Navigate to="/" />} />
           </Routes>
         </main>
       </div>

@@ -57,29 +57,32 @@ export default function BookmarksPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
-            <BookmarkIcon className="h-8 w-8 text-indigo-600 fill-current" />
-            My Bookmarks
+    <div className="max-w-5xl mx-auto space-y-16 pb-32">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
+        <div className="space-y-4">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 text-white/40 text-[10px] font-bold uppercase tracking-[0.2em]">
+            Saved Content
+          </div>
+          <h1 className="text-6xl font-light text-white tracking-tight flex items-center gap-6">
+            <BookmarkIcon className="h-12 w-12 text-indigo-500 fill-current" />
+            Bookmarks
           </h1>
-          <p className="text-slate-500 mt-1">Review and master your saved questions</p>
+          <p className="text-white/30 font-light tracking-tight">Review and master your saved questions.</p>
         </div>
-        <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+        <div className="relative group">
+          <Search className="absolute left-6 top-1/2 -translate-y-1/2 h-5 w-5 text-white/20 group-focus-within:text-white transition-colors" />
           <input
             type="text"
             placeholder="Search bookmarks..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-12 pr-6 py-3 bg-white border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none w-full md:w-80 transition-all"
+            className="pl-16 pr-8 py-5 bg-white/5 border border-white/10 rounded-full focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none w-full md:w-96 transition-all text-white font-light placeholder:text-white/10"
           />
         </div>
       </div>
 
       {filteredBookmarks.length > 0 ? (
-        <div className="space-y-4">
+        <div className="space-y-6">
           {filteredBookmarks.map((bookmark) => {
             const question = JSON.parse(bookmark.question_data) as Question;
             const isExpanded = expandedId === bookmark.id;
@@ -88,37 +91,39 @@ export default function BookmarksPage() {
               <motion.div
                 layout
                 key={bookmark.id}
-                className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden"
+                className="bg-white/[0.02] rounded-[3rem] border border-white/5 overflow-hidden group hover:bg-white/[0.04] transition-all"
               >
                 <div 
-                  className="p-6 cursor-pointer hover:bg-slate-50 transition-colors"
+                  className="p-10 cursor-pointer"
                   onClick={() => setExpandedId(isExpanded ? null : bookmark.id)}
                 >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="space-y-3 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="px-2 py-1 bg-indigo-50 text-indigo-600 text-[10px] font-bold rounded-full uppercase">
+                  <div className="flex items-start justify-between gap-8">
+                    <div className="space-y-6 flex-1">
+                      <div className="flex items-center gap-3">
+                        <span className="px-3 py-1 bg-white/5 text-white/40 text-[10px] font-bold rounded-full uppercase tracking-widest">
                           {question.subject}
                         </span>
-                        <span className="px-2 py-1 bg-slate-100 text-slate-500 text-[10px] font-bold rounded-full uppercase">
+                        <span className="px-3 py-1 bg-white/5 text-white/20 text-[10px] font-bold rounded-full uppercase tracking-widest">
                           {question.difficulty}
                         </span>
                       </div>
-                      <p className="text-slate-800 font-medium leading-relaxed">
+                      <p className="text-2xl font-light text-white leading-tight tracking-tight">
                         {question.text}
                       </p>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-4 shrink-0">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           removeBookmark(bookmark.id);
                         }}
-                        className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                        className="p-4 text-white/10 hover:text-red-500 hover:bg-red-500/10 rounded-2xl transition-all"
                       >
                         <Trash2 className="h-5 w-5" />
                       </button>
-                      <ChevronRight className={`h-5 w-5 text-slate-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                      <div className={`p-4 bg-white/5 rounded-2xl text-white/20 transition-transform duration-500 ${isExpanded ? 'rotate-90 text-white' : ''}`}>
+                        <ChevronRight className="h-5 w-5" />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -129,35 +134,35 @@ export default function BookmarksPage() {
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: 'auto', opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
-                      className="border-t border-slate-100 bg-slate-50/50"
+                      className="border-t border-white/5 bg-white/[0.01]"
                     >
-                      <div className="p-8 space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="p-12 space-y-12">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                           {question.options.map((option, idx) => (
                             <div 
                               key={idx}
-                              className={`p-4 rounded-2xl border-2 flex items-center gap-3 ${
+                              className={`p-8 rounded-[2rem] border-2 flex items-center gap-6 ${
                                 idx === question.correctAnswer 
-                                  ? 'bg-emerald-50 border-emerald-500 text-emerald-900' 
-                                  : 'bg-white border-slate-100 text-slate-600'
+                                  ? 'bg-emerald-500/10 border-emerald-500 text-emerald-500' 
+                                  : 'bg-white/5 border-white/5 text-white/40'
                               }`}
                             >
-                              <span className={`h-8 w-8 flex items-center justify-center rounded-lg font-bold shrink-0 ${
-                                idx === question.correctAnswer ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-400'
+                              <span className={`h-10 w-10 flex items-center justify-center rounded-xl font-black text-sm shrink-0 ${
+                                idx === question.correctAnswer ? 'bg-emerald-500 text-white' : 'bg-white/5 text-white/20'
                               }`}>
                                 {String.fromCharCode(65 + idx)}
                               </span>
-                              <span className="font-medium">{option}</span>
+                              <span className="font-light text-lg tracking-tight">{option}</span>
                             </div>
                           ))}
                         </div>
 
-                        <div className="space-y-3">
-                          <div className="flex items-center gap-2 text-indigo-600 font-bold text-sm">
-                            <HelpCircle className="h-4 w-4" />
+                        <div className="space-y-6">
+                          <div className="flex items-center gap-3 text-indigo-400 font-bold text-[10px] uppercase tracking-widest">
+                            <HelpCircle className="h-5 w-5" />
                             Explanation
                           </div>
-                          <div className="prose prose-slate max-w-none text-slate-600 text-sm leading-relaxed">
+                          <div className="prose prose-invert max-w-none text-white/60 text-lg leading-relaxed font-light">
                             <ReactMarkdown>{question.explanation}</ReactMarkdown>
                           </div>
                         </div>
@@ -170,18 +175,18 @@ export default function BookmarksPage() {
           })}
         </div>
       ) : (
-        <div className="text-center py-20 bg-white rounded-[3rem] border border-slate-200 border-dashed">
-          <div className="p-4 bg-slate-50 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-6">
-            <BookOpen className="h-8 w-8 text-slate-300" />
+        <div className="text-center py-32 bg-white/[0.02] rounded-[4rem] border border-white/5 border-dashed">
+          <div className="p-8 bg-white/5 rounded-full w-24 h-24 flex items-center justify-center mx-auto mb-10">
+            <BookOpen className="h-10 w-10 text-white/10" />
           </div>
-          <h3 className="text-xl font-bold text-slate-900 mb-2">No bookmarks found</h3>
-          <p className="text-slate-500 max-w-xs mx-auto">
+          <h3 className="text-3xl font-light text-white mb-4 tracking-tight">No bookmarks found</h3>
+          <p className="text-white/30 max-w-sm mx-auto font-light">
             {searchQuery ? `No results for "${searchQuery}"` : "Save questions during tests to review them later here."}
           </p>
           {searchQuery && (
             <button 
               onClick={() => setSearchQuery('')}
-              className="mt-4 text-indigo-600 font-bold text-sm hover:underline"
+              className="mt-8 text-indigo-400 font-bold text-[10px] uppercase tracking-widest hover:text-white transition-colors"
             >
               Clear Search
             </button>

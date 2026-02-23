@@ -206,31 +206,33 @@ export default function TestEnvironment() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto">
+    <div className="max-w-7xl mx-auto space-y-12 pb-32">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm sticky top-20 z-40">
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={() => navigate('/dashboard')}
-            className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </button>
-          <div>
-            <h2 className="font-bold text-slate-900">{type === 'Full' ? 'Full Mock Test' : testSubject}</h2>
-            <p className="text-xs text-slate-500">Question {currentIndex + 1} of {questions.length}</p>
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 border-b border-white/10 pb-10 sticky top-20 z-40 bg-black/80 backdrop-blur-md">
+        <div className="space-y-4">
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={() => navigate('/dashboard')}
+              className="p-3 bg-white/5 hover:bg-white/10 rounded-2xl transition-all text-white/40 hover:text-white"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <div className="space-y-1">
+              <p className="text-[10px] uppercase tracking-[0.3em] font-bold text-white/20">Examination Module</p>
+              <h2 className="text-4xl font-light text-white tracking-tight">{type === 'Full' ? 'Full Mock Test' : testSubject}</h2>
+            </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-6">
-          <div className={`flex items-center gap-2 px-4 py-2 rounded-xl font-mono font-bold ${timeLeft < 60 ? 'bg-red-50 text-red-600 animate-pulse' : 'bg-slate-100 text-slate-700'}`}>
-            <Clock className="h-4 w-4" />
-            {formatTime(timeLeft)}
+        <div className="flex items-center gap-8">
+          <div className={`flex items-center gap-4 px-8 py-4 rounded-3xl border ${timeLeft < 300 ? 'bg-red-500/10 border-red-500/20 text-red-500 animate-pulse' : 'bg-white/5 border-white/10 text-white'}`}>
+            <Clock className="h-5 w-5 opacity-40" />
+            <span className="text-2xl font-light tracking-tighter">{formatTime(timeLeft)}</span>
           </div>
           {!isSubmitted && (
             <button
               onClick={handleSubmit}
-              className="bg-indigo-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center gap-2"
+              className="bg-white text-black px-10 py-4 rounded-full font-black text-xs uppercase tracking-widest hover:scale-105 transition-all flex items-center gap-3"
             >
               Submit <Send className="h-4 w-4" />
             </button>
@@ -238,35 +240,40 @@ export default function TestEnvironment() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-12">
         {/* Main Question Area */}
-        <div className="lg:col-span-3 space-y-6">
+        <div className="lg:col-span-3 space-y-12">
           <AnimatePresence mode="wait">
             <motion.div
               key={currentIndex}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="bg-white/[0.02] p-12 rounded-[3rem] border border-white/5 relative overflow-hidden"
             >
-              <div className="flex justify-between items-start mb-6">
-                <span className="px-3 py-1 bg-indigo-50 text-indigo-600 text-xs font-bold rounded-full uppercase tracking-wider">
-                  {currentQuestion.difficulty}
-                </span>
+              <div className="absolute top-0 left-0 w-1.5 h-full bg-indigo-500" />
+              
+              <div className="flex justify-between items-start mb-12">
+                <div className="space-y-2">
+                  <span className="px-3 py-1 bg-white/5 text-white/40 text-[10px] font-bold rounded-full uppercase tracking-widest">
+                    {currentQuestion.difficulty}
+                  </span>
+                  <p className="text-[10px] uppercase tracking-widest font-bold text-white/20">Question {currentIndex + 1} of {questions.length}</p>
+                </div>
                 <button 
                   onClick={() => handleBookmark(currentIndex)}
                   disabled={bookmarked[currentIndex]}
-                  className={`p-2 rounded-lg transition-colors ${bookmarked[currentIndex] ? 'text-amber-500 bg-amber-50' : 'text-slate-400 hover:bg-slate-100'}`}
+                  className={`p-4 rounded-2xl transition-all ${bookmarked[currentIndex] ? 'text-amber-500 bg-amber-500/10' : 'text-white/20 hover:text-white hover:bg-white/5'}`}
                 >
-                  <Bookmark className={`h-5 w-5 ${bookmarked[currentIndex] ? 'fill-current' : ''}`} />
+                  <Bookmark className={`h-6 w-6 ${bookmarked[currentIndex] ? 'fill-current' : ''}`} />
                 </button>
               </div>
 
-              <h3 className="text-xl font-medium text-slate-900 mb-8 leading-relaxed">
+              <h3 className="text-3xl font-light text-white mb-12 leading-tight tracking-tight">
                 {currentQuestion.text}
               </h3>
 
-              <div className="space-y-3">
+              <div className="grid grid-cols-1 gap-4">
                 {currentQuestion.options.map((option, idx) => {
                   const isSelected = answers[currentIndex] === idx;
                   const isCorrect = currentQuestion.correctAnswer === idx;
@@ -285,24 +292,24 @@ export default function TestEnvironment() {
                       key={idx}
                       disabled={isSubmitted}
                       onClick={() => setAnswers({ ...answers, [currentIndex]: idx })}
-                      className={`w-full text-left p-4 rounded-2xl border-2 transition-all flex items-center gap-4 ${
-                        variant === 'correct' ? 'bg-emerald-50 border-emerald-500 text-emerald-900' :
-                        variant === 'incorrect' ? 'bg-red-50 border-red-500 text-red-900' :
-                        variant === 'selected' ? 'bg-indigo-50 border-indigo-500 text-indigo-900' :
-                        'bg-white border-slate-100 hover:border-slate-300 text-slate-700'
+                      className={`w-full text-left p-8 rounded-[2rem] border-2 transition-all flex items-center gap-8 group ${
+                        variant === 'correct' ? 'bg-emerald-500/10 border-emerald-500 text-emerald-500' :
+                        variant === 'incorrect' ? 'bg-red-500/10 border-red-500 text-red-500' :
+                        variant === 'selected' ? 'bg-white border-white text-black' :
+                        'bg-white/5 border-white/5 hover:border-white/20 text-white/60'
                       }`}
                     >
-                      <span className={`h-8 w-8 flex items-center justify-center rounded-lg font-bold shrink-0 ${
+                      <span className={`h-10 w-10 flex items-center justify-center rounded-xl font-black text-sm transition-all ${
                         variant === 'correct' ? 'bg-emerald-500 text-white' :
                         variant === 'incorrect' ? 'bg-red-500 text-white' :
-                        variant === 'selected' ? 'bg-indigo-500 text-white' :
-                        'bg-slate-100 text-slate-500'
+                        variant === 'selected' ? 'bg-black text-white' :
+                        'bg-white/5 text-white/20 group-hover:text-white'
                       }`}>
                         {String.fromCharCode(65 + idx)}
                       </span>
-                      <span className="font-medium">{option}</span>
-                      {showResult && isCorrect && <CheckCircle2 className="ml-auto h-5 w-5 text-emerald-500" />}
-                      {showResult && isSelected && !isCorrect && <XCircle className="ml-auto h-5 w-5 text-red-500" />}
+                      <span className="font-light text-xl tracking-tight">{option}</span>
+                      {showResult && isCorrect && <CheckCircle2 className="ml-auto h-6 w-6 text-emerald-500" />}
+                      {showResult && isSelected && !isCorrect && <XCircle className="ml-auto h-6 w-6 text-red-500" />}
                     </button>
                   );
                 })}
@@ -312,13 +319,13 @@ export default function TestEnvironment() {
                 <motion.div 
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="mt-10 p-6 bg-slate-50 rounded-2xl border border-slate-200"
+                  className="mt-16 p-10 bg-white/5 rounded-[2.5rem] border border-white/10"
                 >
-                  <div className="flex items-center gap-2 mb-4 text-indigo-600 font-bold">
+                  <div className="flex items-center gap-3 mb-6 text-indigo-400 font-bold text-sm uppercase tracking-widest">
                     <HelpCircle className="h-5 w-5" />
                     Explanation
                   </div>
-                  <div className="prose prose-slate max-w-none text-slate-600 leading-relaxed">
+                  <div className="prose prose-invert max-w-none text-white/60 leading-relaxed font-light">
                     <ReactMarkdown>{currentQuestion.explanation}</ReactMarkdown>
                   </div>
                 </motion.div>
@@ -327,24 +334,24 @@ export default function TestEnvironment() {
           </AnimatePresence>
 
           {/* Navigation Controls */}
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-8">
             <button
               onClick={() => setCurrentIndex(prev => Math.max(0, prev - 1))}
               disabled={currentIndex === 0}
-              className="w-full sm:w-auto flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-slate-600 hover:bg-white hover:shadow-sm transition-all disabled:opacity-30"
+              className="w-full sm:w-auto flex items-center gap-3 px-10 py-5 rounded-full font-bold text-[10px] uppercase tracking-widest text-white/40 hover:text-white hover:bg-white/5 transition-all disabled:opacity-10"
             >
-              <ChevronLeft className="h-5 w-5" /> Previous
+              <ChevronLeft className="h-4 w-4" /> Previous
             </button>
 
             {canUnlockNext && (
               <button
                 onClick={handleNextWindow}
                 disabled={loadingNext}
-                className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3 rounded-xl font-bold bg-emerald-600 text-white hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100 disabled:opacity-50"
+                className="w-full sm:w-auto flex items-center justify-center gap-4 px-12 py-5 rounded-full font-black text-[10px] uppercase tracking-widest bg-indigo-500 text-white hover:bg-indigo-600 transition-all shadow-2xl shadow-indigo-500/20 disabled:opacity-50"
               >
                 {loadingNext ? (
                   <>
-                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                     Generating Next 50...
                   </>
                 ) : (
@@ -358,25 +365,25 @@ export default function TestEnvironment() {
             <button
               onClick={() => setCurrentIndex(prev => Math.min(questions.length - 1, prev + 1))}
               disabled={currentIndex === questions.length - 1}
-              className="w-full sm:w-auto flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-slate-600 hover:bg-white hover:shadow-sm transition-all disabled:opacity-30"
+              className="w-full sm:w-auto flex items-center gap-3 px-10 py-5 rounded-full font-bold text-[10px] uppercase tracking-widest text-white/40 hover:text-white hover:bg-white/5 transition-all disabled:opacity-10"
             >
-              Next <ChevronRight className="h-5 w-5" />
+              Next <ChevronRight className="h-4 w-4" />
             </button>
           </div>
         </div>
 
         {/* Question Grid Sidebar */}
-        <div className="space-y-6">
-          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <h4 className="font-bold text-slate-900">Question Palette</h4>
+        <div className="space-y-8">
+          <div className="bg-white/[0.02] border border-white/5 rounded-[3rem] p-10 space-y-10">
+            <div className="space-y-4">
+              <h4 className="text-[10px] uppercase tracking-[0.3em] font-bold text-white/20">Question Palette</h4>
               {type === 'Full' && (
-                <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-full uppercase">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 text-indigo-500 text-[10px] font-bold uppercase tracking-widest">
                   Window {currentWindow + 1}/4
-                </span>
+                </div>
               )}
             </div>
-            <div className="grid grid-cols-5 gap-2 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+            <div className="grid grid-cols-5 gap-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
               {questions.map((_, idx) => {
                 const isAnswered = answers[idx] !== undefined;
                 const isCurrent = currentIndex === idx;
@@ -387,15 +394,15 @@ export default function TestEnvironment() {
                   <button
                     key={idx}
                     onClick={() => setCurrentIndex(idx)}
-                    className={`h-10 w-10 rounded-xl flex items-center justify-center font-bold text-sm transition-all ${
-                      isCurrent ? 'ring-2 ring-indigo-500 ring-offset-2' : ''
+                    className={`h-10 w-10 rounded-xl flex items-center justify-center font-black text-xs transition-all ${
+                      isCurrent ? 'ring-4 ring-white/10 scale-110 z-10' : ''
                     } ${
                       isSubmitted ? (
                         isCorrect ? 'bg-emerald-500 text-white' :
                         isWrong ? 'bg-red-500 text-white' :
-                        'bg-slate-100 text-slate-400'
+                        'bg-white/5 text-white/20'
                       ) : (
-                        isAnswered ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500'
+                        isAnswered ? 'bg-white text-black' : 'bg-white/5 text-white/20 hover:bg-white/10'
                       )
                     }`}
                   >
@@ -403,32 +410,48 @@ export default function TestEnvironment() {
                   </button>
                 );
               })}
-              {type === 'Full' && questions.length < 200 && !isSubmitted && (
-                <div className="col-span-5 mt-4 p-3 bg-slate-50 rounded-xl border border-dashed border-slate-200 text-center">
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                    {200 - questions.length} more questions to unlock
-                  </p>
-                </div>
+            </div>
+
+            <div className="pt-10 border-t border-white/5 space-y-6">
+              <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest text-white/20">
+                <div className="h-3 w-3 bg-white rounded-sm" />
+                <span>Answered</span>
+              </div>
+              <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest text-white/20">
+                <div className="h-3 w-3 bg-white/5 rounded-sm" />
+                <span>Not Visited</span>
+              </div>
+              {isSubmitted && (
+                <>
+                  <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest text-white/20">
+                    <div className="h-3 w-3 bg-emerald-500 rounded-sm" />
+                    <span>Correct</span>
+                  </div>
+                  <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest text-white/20">
+                    <div className="h-3 w-3 bg-red-500 rounded-sm" />
+                    <span>Incorrect</span>
+                  </div>
+                </>
               )}
             </div>
           </div>
 
           {isSubmitted && (
-            <div className="bg-indigo-600 p-6 rounded-3xl text-white shadow-lg shadow-indigo-100">
-              <h4 className="font-bold mb-2">Test Summary</h4>
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm opacity-90">
-                  <span>Score</span>
-                  <span className="font-bold">{questions.reduce((acc, q, idx) => acc + (answers[idx] === q.correctAnswer ? 1 : 0), 0)}/{questions.length}</span>
+            <div className="bg-indigo-500/10 border border-indigo-500/20 p-10 rounded-[3rem] space-y-8">
+              <h4 className="text-xl font-light text-white tracking-tight">Test Summary</h4>
+              <div className="space-y-4">
+                <div className="flex justify-between items-end">
+                  <span className="text-[10px] uppercase tracking-widest font-bold text-white/20">Score</span>
+                  <span className="text-2xl font-light text-white tracking-tighter">{questions.reduce((acc, q, idx) => acc + (answers[idx] === q.correctAnswer ? 1 : 0), 0)}/{questions.length}</span>
                 </div>
-                <div className="flex justify-between text-sm opacity-90">
-                  <span>Accuracy</span>
-                  <span className="font-bold">{Math.round((questions.reduce((acc, q, idx) => acc + (answers[idx] === q.correctAnswer ? 1 : 0), 0) / questions.length) * 100)}%</span>
+                <div className="flex justify-between items-end">
+                  <span className="text-[10px] uppercase tracking-widest font-bold text-white/20">Accuracy</span>
+                  <span className="text-2xl font-light text-white tracking-tighter">{Math.round((questions.reduce((acc, q, idx) => acc + (answers[idx] === q.correctAnswer ? 1 : 0), 0) / questions.length) * 100)}%</span>
                 </div>
               </div>
               <button
                 onClick={() => navigate('/dashboard')}
-                className="w-full mt-6 bg-white text-indigo-600 py-3 rounded-xl font-bold hover:bg-indigo-50 transition-colors"
+                className="w-full py-4 bg-white text-black rounded-full font-black text-[10px] uppercase tracking-widest hover:scale-105 transition-all"
               >
                 Back to Dashboard
               </button>

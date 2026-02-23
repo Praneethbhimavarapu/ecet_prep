@@ -77,40 +77,49 @@ export default function AnalyticsView() {
   const strongTopics = barData.filter(d => d.accuracy >= 80).map(d => d.name);
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-slate-900">Performance Analytics</h1>
+    <div className="space-y-16 pb-32">
+      <div className="space-y-4">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 text-white/40 text-[10px] font-bold uppercase tracking-[0.2em]">
+          Performance Insights
+        </div>
+        <h1 className="text-6xl font-light text-white tracking-tight">Analytics</h1>
+        <p className="text-white/30 font-light tracking-tight">Deep dive into your AP ECET preparation metrics.</p>
       </div>
 
       {/* Progression Chart */}
-      <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
-        <h3 className="text-xl font-bold text-slate-900 mb-8 flex items-center gap-2">
-          <TrendingUp className="h-5 w-5 text-indigo-600" />
-          Progression vs. Global Average
-        </h3>
-        <div className="h-[300px]">
+      <section className="space-y-8">
+        <div className="flex items-center justify-between border-b border-white/10 pb-6">
+          <h3 className="text-3xl font-light text-white tracking-tight flex items-center gap-4">
+            <TrendingUp className="h-6 w-6 text-indigo-500" />
+            Progression vs. Global Average
+          </h3>
+          <span className="text-[10px] uppercase tracking-widest font-bold text-white/30">Last 10 attempts</span>
+        </div>
+        <div className="h-[400px] w-full bg-white/[0.02] rounded-[3rem] p-10 border border-white/5">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={progressionData}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-              <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} dy={10} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} dx={-10} domain={[0, 100]} />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+              <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 10, fontWeight: 700 }} dy={10} />
+              <YAxis axisLine={false} tickLine={false} tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 10, fontWeight: 700 }} dx={-10} domain={[0, 100]} />
               <Tooltip 
-                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                contentStyle={{ backgroundColor: '#000', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 20px 40px rgba(0,0,0,0.5)' }}
+                itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 700 }}
               />
-              <Legend verticalAlign="top" height={36}/>
+              <Legend verticalAlign="top" height={36} wrapperStyle={{ paddingTop: '0px', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700 }} />
               <Line 
                 name="Your Accuracy"
                 type="monotone" 
                 dataKey="yourScore" 
-                stroke="#4f46e5" 
+                stroke="#6366f1" 
                 strokeWidth={4} 
-                dot={{ r: 4, fill: '#4f46e5' }}
+                dot={{ r: 6, fill: '#6366f1', strokeWidth: 0 }}
+                activeDot={{ r: 8, strokeWidth: 0 }}
               />
               <Line 
                 name="Global Avg"
                 type="monotone" 
                 dataKey="avgScore" 
-                stroke="#94a3b8" 
+                stroke="rgba(255,255,255,0.2)" 
                 strokeWidth={2} 
                 strokeDasharray="5 5"
                 dot={false}
@@ -118,26 +127,28 @@ export default function AnalyticsView() {
             </LineChart>
           </ResponsiveContainer>
         </div>
-      </div>
+      </section>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
         {/* Accuracy by Subject */}
-        <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
-          <h3 className="text-xl font-bold text-slate-900 mb-8 flex items-center gap-2">
-            <Target className="h-5 w-5 text-indigo-600" />
-            Accuracy by Subject
-          </h3>
-          <div className="h-[400px]">
+        <section className="space-y-8">
+          <div className="flex items-center justify-between border-b border-white/10 pb-6">
+            <h3 className="text-3xl font-light text-white tracking-tight flex items-center gap-4">
+              <Target className="h-6 w-6 text-white/40" />
+              Subject Mastery
+            </h3>
+          </div>
+          <div className="h-[450px] w-full bg-white/[0.02] rounded-[3rem] p-10 border border-white/5">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={barData} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(255,255,255,0.05)" />
                 <XAxis type="number" domain={[0, 100]} hide />
-                <YAxis dataKey="name" type="category" width={150} axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
+                <YAxis dataKey="name" type="category" width={120} axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.4)', fontWeight: 700 }} />
                 <Tooltip 
-                  cursor={{ fill: '#f8fafc' }}
-                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                  cursor={{ fill: 'rgba(255,255,255,0.02)' }}
+                  contentStyle={{ backgroundColor: '#000', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.1)' }}
                 />
-                <Bar dataKey="accuracy" radius={[0, 8, 8, 0]}>
+                <Bar dataKey="accuracy" radius={[0, 12, 12, 0]} barSize={24}>
                   {barData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
@@ -145,70 +156,71 @@ export default function AnalyticsView() {
               </BarChart>
             </ResponsiveContainer>
           </div>
-        </div>
+        </section>
 
         {/* Insights & Recommendations */}
-        <div className="space-y-8">
-          <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
-            <h3 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-indigo-600" />
+        <div className="space-y-12">
+          <section className="bg-white/[0.02] border border-white/5 rounded-[3rem] p-12 space-y-12">
+            <h3 className="text-3xl font-light text-white tracking-tight flex items-center gap-4">
+              <TrendingUp className="h-6 w-6 text-indigo-500" />
               Learning Insights
             </h3>
-            <div className="space-y-6">
-              <div>
-                <p className="text-sm font-semibold text-slate-500 mb-3 flex items-center gap-2">
+            <div className="space-y-10">
+              <div className="space-y-4">
+                <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest flex items-center gap-2">
                   <AlertTriangle className="h-4 w-4 text-amber-500" />
                   Needs Improvement
                 </p>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-3">
                   {weakTopics.length > 0 ? weakTopics.map(t => (
-                    <span key={t} className="px-3 py-1 bg-amber-50 text-amber-700 rounded-full text-xs font-bold border border-amber-100">{t}</span>
-                  )) : <span className="text-slate-400 text-sm italic">No major weak areas detected!</span>}
+                    <span key={t} className="px-5 py-2 bg-amber-500/10 text-amber-500 rounded-full text-[10px] font-bold uppercase tracking-widest border border-amber-500/20">{t}</span>
+                  )) : <span className="text-white/20 text-sm italic font-light">No major weak areas detected!</span>}
                 </div>
               </div>
-              <div>
-                <p className="text-sm font-semibold text-slate-500 mb-3 flex items-center gap-2">
+              <div className="space-y-4">
+                <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 text-emerald-500" />
                   Strong Areas
                 </p>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-3">
                   {strongTopics.length > 0 ? strongTopics.map(t => (
-                    <span key={t} className="px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full text-xs font-bold border border-emerald-100">{t}</span>
-                  )) : <span className="text-slate-400 text-sm italic">Keep practicing to build strong areas!</span>}
+                    <span key={t} className="px-5 py-2 bg-emerald-500/10 text-emerald-500 rounded-full text-[10px] font-bold uppercase tracking-widest border border-emerald-500/20">{t}</span>
+                  )) : <span className="text-white/20 text-sm italic font-light">Keep practicing to build strong areas!</span>}
                 </div>
               </div>
-              <div className="pt-4 border-t border-slate-100">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-slate-500 flex items-center gap-2">
+              <div className="pt-8 border-t border-white/5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-white/20 uppercase tracking-widest flex items-center gap-2">
                     <Users className="h-4 w-4" />
                     Global Percentile
                   </span>
-                  <span className="font-bold text-indigo-600">
+                  <span className="text-2xl font-light text-indigo-400 tracking-tighter">
                     {userAvgAccuracy > globalAvgAccuracy ? "Top 25%" : "Top 50%"}
                   </span>
                 </div>
               </div>
             </div>
-          </div>
+          </section>
 
-          <div className="bg-indigo-600 p-8 rounded-3xl text-white">
-            <h3 className="text-xl font-bold mb-4">AI Recommendation</h3>
-            <p className="text-indigo-100 leading-relaxed mb-6">
+          <section className="bg-indigo-500 p-12 rounded-[3rem] text-white space-y-8 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-32 -mt-32 group-hover:bg-white/20 transition-all duration-700" />
+            <h3 className="text-3xl font-light tracking-tight relative z-10">AI Recommendation</h3>
+            <p className="text-white/80 leading-relaxed text-lg font-light relative z-10">
               {weakTopics.length > 0 
                 ? `Based on your recent performance, we recommend focusing on ${weakTopics[0]}. Your accuracy here is below the global average. Try a targeted subject test.`
                 : "You're performing above the global average! To maintain your lead, focus on speed and time management in Full Mock Tests."}
             </p>
-            <div className="flex items-center gap-4 text-sm font-bold">
-              <div className="flex items-center gap-1">
-                <Clock className="h-4 w-4" />
+            <div className="flex items-center gap-8 text-[10px] font-bold uppercase tracking-widest relative z-10">
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 opacity-40" />
                 Avg Time: {safeHistory.length ? Math.round(safeHistory.reduce((a, c) => a + c.duration, 0) / safeHistory.length) : 0}m
               </div>
-              <div className="flex items-center gap-1">
-                <Target className="h-4 w-4" />
+              <div className="flex items-center gap-2">
+                <Target className="h-4 w-4 opacity-40" />
                 Consistency: High
               </div>
             </div>
-          </div>
+          </section>
         </div>
       </div>
     </div>

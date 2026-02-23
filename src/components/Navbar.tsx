@@ -16,35 +16,35 @@ export default function Navbar({ user, onLogout, onLogin }: NavbarProps) {
   const navigate = useNavigate();
 
   return (
-    <nav className="bg-white border-b border-slate-200 sticky top-0 z-50">
+    <nav className="bg-black/50 border-b border-white/10 sticky top-0 z-50 backdrop-blur-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
+        <div className="flex justify-between h-20">
           <div className="flex items-center">
-            <Link to="/" className="flex items-center gap-2">
-              <div className="bg-indigo-600 p-2 rounded-lg">
-                <BookOpen className="h-6 w-6 text-white" />
+            <Link to="/" className="flex items-center gap-3">
+              <div className="bg-white p-2 rounded-xl">
+                <BookOpen className="h-6 w-6 text-black" />
               </div>
-              <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-violet-600 hidden sm:block">
-                AP ECET 2026
+              <span className="text-xl font-bold tracking-tight text-white hidden sm:block">
+                AP ECET <span className="text-white/50 font-light">2026</span>
               </span>
             </Link>
           </div>
 
-          <div className="hidden md:flex items-center gap-6">
+          <div className="hidden md:flex items-center gap-8">
             {user ? (
               <>
-                <Link to="/dashboard" className="text-slate-600 hover:text-indigo-600 font-medium transition-colors">Dashboard</Link>
-                <Link to="/bookmarks" className="text-slate-600 hover:text-indigo-600 font-medium transition-colors flex items-center gap-1">
-                  <Bookmark className="h-4 w-4" /> Bookmarks
+                <Link to="/dashboard" className="text-white/70 hover:text-white text-sm font-medium transition-colors tracking-wide">DASHBOARD</Link>
+                <Link to="/bookmarks" className="text-white/70 hover:text-white text-sm font-medium transition-colors flex items-center gap-2 tracking-wide">
+                  <Bookmark className="h-4 w-4" /> BOOKMARKS
                 </Link>
-                <div className="flex items-center gap-3 pl-4 border-l border-slate-200">
+                <div className="flex items-center gap-4 pl-6 border-l border-white/10">
                   <div className="flex flex-col items-end">
-                    <span className="text-sm font-semibold text-slate-900">{user.name}</span>
-                    <span className="text-xs text-slate-500">{user.email}</span>
+                    <span className="text-sm font-bold text-white tracking-tight">{user.name}</span>
+                    <span className="text-[10px] text-white/40 uppercase tracking-widest">{user.email}</span>
                   </div>
                   <button
                     onClick={() => { onLogout(); navigate('/'); }}
-                    className="p-2 text-slate-400 hover:text-red-500 transition-colors"
+                    className="p-2 text-white/40 hover:text-white transition-colors"
                     title="Logout"
                   >
                     <LogOut className="h-5 w-5" />
@@ -54,9 +54,9 @@ export default function Navbar({ user, onLogout, onLogin }: NavbarProps) {
             ) : (
               <button
                 onClick={() => setIsAuthModalOpen(true)}
-                className="bg-indigo-600 text-white px-6 py-2 rounded-full font-medium hover:bg-indigo-700 transition-all shadow-md shadow-indigo-100"
+                className="bg-white text-black px-8 py-2.5 rounded-full font-bold text-sm hover:bg-white/90 transition-all"
               >
-                Sign In
+                SIGN IN
               </button>
             )}
           </div>
@@ -71,14 +71,14 @@ export default function Navbar({ user, onLogout, onLogin }: NavbarProps) {
 
       {/* Mobile Menu */}
       {isMenuOpen && (
-        <div className="md:hidden bg-white border-b border-slate-200 px-4 py-4 space-y-4">
+        <div className="md:hidden bg-black border-b border-white/10 px-4 py-8 space-y-6">
           {user ? (
             <>
-              <Link to="/dashboard" className="block text-slate-600 font-medium" onClick={() => setIsMenuOpen(false)}>Dashboard</Link>
-              <Link to="/bookmarks" className="block text-slate-600 font-medium" onClick={() => setIsMenuOpen(false)}>Bookmarks</Link>
+              <Link to="/dashboard" className="block text-white font-light tracking-tight text-xl" onClick={() => setIsMenuOpen(false)}>Dashboard</Link>
+              <Link to="/bookmarks" className="block text-white font-light tracking-tight text-xl" onClick={() => setIsMenuOpen(false)}>Bookmarks</Link>
               <button
                 onClick={() => { onLogout(); navigate('/'); setIsMenuOpen(false); }}
-                className="block text-red-500 font-medium"
+                className="block text-red-500 font-bold text-[10px] uppercase tracking-widest"
               >
                 Logout
               </button>
@@ -86,7 +86,7 @@ export default function Navbar({ user, onLogout, onLogin }: NavbarProps) {
           ) : (
             <button
               onClick={() => { setIsAuthModalOpen(true); setIsMenuOpen(false); }}
-              className="w-full bg-indigo-600 text-white py-2 rounded-lg font-medium"
+              className="w-full bg-white text-black py-4 rounded-full font-black text-[10px] uppercase tracking-widest"
             >
               Sign In
             </button>
