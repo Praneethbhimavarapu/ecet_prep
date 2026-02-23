@@ -1,7 +1,12 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Question, Subject } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+const apiKey = process.env.GEMINI_API_KEY || "";
+let ai: any = null;
+
+if (apiKey) {
+  ai = new GoogleGenAI({ apiKey });
+}
 
 const questionSchema = {
   type: Type.ARRAY,
@@ -9,8 +14,8 @@ const questionSchema = {
     type: Type.OBJECT,
     properties: {
       text: { type: Type.STRING, description: "The question text" },
-      options: { 
-        type: Type.ARRAY, 
+      options: {
+        type: Type.ARRAY,
         items: { type: Type.STRING },
         description: "Exactly 4 options"
       },
@@ -25,12 +30,13 @@ const questionSchema = {
 };
 
 export async function generateQuestions(
-  subject: Subject | 'Full', 
-  count: number = 30, 
+  subject: Subject | 'Full',
+  count: number = 30,
   windowIndex: number = 0
 ): Promise<Question[]> {
+  if (!ai) throw new Error("Gemini API key is not configured. Please add it to your environment variables.");
   const model = "gemini-3-flash-preview";
-  const batchSize = 25; 
+  const batchSize = 25;
   let allQuestions: Question[] = [];
 
   // Distribution logic for Full Mock Test (200 questions total, 50 per window)
@@ -73,7 +79,7 @@ export async function generateQuestions(
     const currentBatchSize = Math.min(batchSize, count - allQuestions.length);
     if (currentBatchSize <= 0) break;
 
-    const prompt = subject === 'Full' 
+    const prompt = subject === 'Full'
       ? getFullMockPrompt(i, currentBatchSize)
       : `Generate ${currentBatchSize} highly probable and frequently asked multiple-choice questions for the subject "${subject}" specifically for AP ECET 2026 (CSE Branch) preparation.
          These questions should be strictly at the ECET competitive level, focusing on core concepts and common problem patterns found in previous years' papers.
@@ -102,7 +108,7 @@ export async function generateQuestions(
     } catch (error) {
       console.error(`Error in batch ${i + 1}:`, error);
       if (allQuestions.length === 0) throw error;
-      break; 
+      break;
     }
   }
 
@@ -113,6 +119,7 @@ export async function generateStaticPool(
   subject: Subject,
   count: number = 200
 ): Promise<Question[]> {
+  if (!ai) throw new Error("Gemini API key is not configured. Please add it to your environment variables.");
   const model = "gemini-3-flash-preview";
   const batchSize = 25;
   let allQuestions: Question[] = [];
