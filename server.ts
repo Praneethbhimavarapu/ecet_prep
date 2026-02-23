@@ -47,9 +47,11 @@ async function connectDB() {
     // Create indexes
     await db.collection('users').createIndex({ email: 1 }, { unique: true });
     await db.collection('test_attempts').createIndex({ user_id: 1 });
+    await db.collection('test_attempts').createIndex({ date: -1 });
     await db.collection('bookmarks').createIndex({ user_id: 1 });
     await db.collection('static_questions').createIndex({ subject: 1 });
     await db.collection('static_questions').createIndex({ is_important: 1 });
+    await db.collection('user_progress').createIndex({ user_id: 1 });
   } catch (error) {
     console.error("❌ MongoDB connection failed:", error);
     process.exit(1);
@@ -113,6 +115,18 @@ app.post("/api/auth/register", async (req, res) => {
       created_at: new Date()
     });
     
+    // Initialize user progress
+    await db.collection('user_progress').insertOne({
+      user_id: result.insertedId.toString(),
+      total_tests: 0,
+      total_score: 0,
+      total_possible: 0,
+      avg_accuracy: 0,
+      subjects_completed: [],
+      windows_completed: [],
+      created_at: new Date()
+    });
+    
     const user = { id: result.insertedId.toString(), name, email };
     const token = jwt.sign(user, JWT_SECRET);
     res.json({ token, user });
@@ -138,7 +152,7 @@ app.post("/api/auth/login", async (req, res) => {
   res.json({ token, user: userData });
 });
 
-// Gemini Question Generation (Backend Only)
+// NEW: Generate Questions with 200-question support and windowed approach
 app.post("/api/generate-questions", authenticate, async (req: any, res) => {
   const { subject, count = 30, windowIndex = 0 } = req.body;
   
@@ -147,36 +161,44 @@ app.post("/api/generate-questions", authenticate, async (req: any, res) => {
     let allQuestions: any[] = [];
     const batches = Math.ceil(count / batchSize);
 
+    // Full Mock Test Distribution (200 questions = 100 MPC + 100 CSE Core)
+    // 4 Windows × 50 questions each
     const getFullMockPrompt = (batchIdx: number, size: number) => {
       let distribution = "";
       let sequenceOrder = "";
+      
       if (windowIndex === 0) {
-        distribution = "Math: 12, Physics: 6, Chemistry: 6, CSE (Digital Electronics: 6, Software Eng: 6, CO: 8, Data Structures: 4)";
-        sequenceOrder = "1. Math, 2. Physics, 3. Chemistry, 4. Digital Electronics, 5. Software Eng, 6. Computer Organization, 7. Data Structures";
+        // Window 1: 50 questions (Math: 25, Physics: 12, Chemistry: 13)
+        distribution = "Math: 25, Physics: 12, Chemistry: 13";
+        sequenceOrder = "1. Mathematics (25 questions), 2. Physics (12 questions), 3. Chemistry (13 questions)";
       } else if (windowIndex === 1) {
-        distribution = "Math: 13, Physics: 6, Chemistry: 6, CSE (Data Structures: 6, Computer Networks: 6, OS: 7)";
-        sequenceOrder = "1. Math, 2. Physics, 3. Chemistry, 4. Data Structures, 5. Computer Networks, 6. Operating Systems";
+        // Window 2: 50 questions (Math: 25, Physics: 13, Chemistry: 12)
+        distribution = "Math: 25, Physics: 13, Chemistry: 12";
+        sequenceOrder = "1. Mathematics (25 questions), 2. Physics (13 questions), 3. Chemistry (12 questions)";
       } else if (windowIndex === 2) {
-        distribution = "Math: 12, Physics: 6, Chemistry: 6, CSE (OS: 3, DBMS: 8, Java: 7)";
-        sequenceOrder = "1. Math, 2. Physics, 3. Chemistry, 4. Operating Systems, 5. DBMS, 6. Java/Programming";
+        // Window 3: 50 questions (Programming in C: 10, Data Structures: 10, Digital Electronics: 10, Computer Organization: 10, Operating Systems: 10)
+        distribution = "Programming in C: 10, Data Structures: 10, Digital Electronics: 10, Computer Organization: 10, Operating Systems: 10";
+        sequenceOrder = "1. Programming in C (10), 2. Data Structures (10), 3. Digital Electronics (10), 4. Computer Organization (10), 5. Operating Systems (10)";
       } else if (windowIndex === 3) {
-        distribution = "Math: 13, Physics: 7, Chemistry: 7, CSE (Java: 3, Web Tech: 8, Big Data: 6, Android: 6, IoT: 8, Python: 8)";
-        sequenceOrder = "1. Math, 2. Physics, 3. Chemistry, 4. Java, 5. Web Tech, 6. Big Data, 7. Android, 8. IoT, 9. Python";
+        // Window 4: 50 questions (Database Management Systems: 10, Computer Networks: 10, Programming in C: 10, Data Structures: 10, Operating Systems: 10)
+        distribution = "Database Management Systems: 10, Computer Networks: 10, Programming in C: 10, Data Structures: 10, Operating Systems: 10";
+        sequenceOrder = "1. DBMS (10), 2. Computer Networks (10), 3. Programming in C (10), 4. Data Structures (10), 5. Operating Systems (10)";
       }
 
       return `Generate ${size} highly probable and frequently asked multiple-choice questions for the AP ECET 2026 (CSE Branch) exam. 
          These questions should be strictly at the ECET competitive level.
-         This is Window ${windowIndex + 1} (Questions ${windowIndex * 50 + 1} to ${(windowIndex + 1) * 50}).
+         This is Window ${windowIndex + 1} of 4 (Questions ${windowIndex * 50 + 1} to ${(windowIndex + 1) * 50} out of 200 total).
          Batch ${batchIdx + 1}.
          
          SYLLABUS DISTRIBUTION FOR THIS WINDOW: ${distribution}.
          CRITICAL: You MUST generate the questions in the following SUBJECT SEQUENCE: ${sequenceOrder}.
          
          Follow the C-23 Diploma curriculum strictly.
-         DISTRIBUTION: The questions MUST be evenly divided among difficulty levels: Easy, Medium, and Hard (ECET-level).
+         DISTRIBUTION: The questions MUST be evenly divided among difficulty levels: Easy (30%), Medium (50%), and Hard (20%) at ECET competitive level.
          IMPORTANT: Focus on "Most Probable" and "Very Important" questions that are likely to appear in the 2026 exam.
          For EACH question, provide a step-by-step explanation suitable for a COMPLETE BEGINNER. 
-         Explain the concept simply, why the correct answer is right, and why the other options are incorrect.`;
+         Start with basic concepts, explain the solution process, why the correct answer is right, and why each incorrect option is wrong.
+         Use simple language and avoid jargon where possible.`;
     };
 
     for (let i = 0; i < batches; i++) {
@@ -187,12 +209,13 @@ app.post("/api/generate-questions", authenticate, async (req: any, res) => {
         ? getFullMockPrompt(i, currentBatchSize)
         : `Generate ${currentBatchSize} highly probable and frequently asked multiple-choice questions for the subject "${subject}" specifically for AP ECET 2026 (CSE Branch) preparation.
            These questions should be strictly at the ECET competitive level, focusing on core concepts and common problem patterns found in previous years' papers.
-           This is batch ${i + 1} of ${batches}.
+           This is batch ${i + 1} of ${batches}. Generate 30 questions total for subject-wise tests.
            Follow the C-23 Diploma curriculum strictly.
-           DISTRIBUTION: The questions MUST be evenly divided among difficulty levels: Easy, Medium, and Hard (ECET-level).
+           DISTRIBUTION: Easy (30%), Medium (50%), Hard (20%) at ECET level.
            IMPORTANT: Focus on "Most Probable" and "Very Important" questions that are likely to appear in the 2026 exam.
            For EACH question, provide a step-by-step explanation suitable for a COMPLETE BEGINNER. 
-           Explain the concept simply, why the correct answer is right, and why the other options are incorrect.`;
+           Start with basic concepts, explain the solution process clearly, why the correct answer is right, and why each incorrect option is wrong.
+           Use simple, easy-to-understand language. Avoid complex jargon. Think of explaining to someone learning the concept for the first time.`;
 
       try {
         const response = await ai.models.generateContent({
@@ -223,9 +246,81 @@ app.post("/api/generate-questions", authenticate, async (req: any, res) => {
   }
 });
 
-// Test Routes
+// NEW: Generate and store "Most Important Questions" static pool
+app.post("/api/admin/generate-important-pool", async (req, res) => {
+  const { subject, count = 200 } = req.body;
+  
+  try {
+    const batchSize = 25;
+    let allQuestions: any[] = [];
+    const batches = Math.ceil(count / batchSize);
+
+    for (let i = 0; i < batches; i++) {
+      const currentBatchSize = Math.min(batchSize, count - allQuestions.length);
+      if (currentBatchSize <= 0) break;
+
+      const prompt = `Generate ${currentBatchSize} HIGHLY PROBABLE and VERY IMPORTANT multiple-choice questions for the subject "${subject}" specifically for AP ECET 2026 (CSE Branch) exam.
+         These are the MOST IMPORTANT questions that are HIGHLY LIKELY to appear in the actual exam.
+         Focus on frequently asked topics, common problem patterns, and critical concepts from C-23 Diploma curriculum.
+         This is batch ${i + 1} of ${batches} for building a static pool of 200+ most important questions.
+         
+         DIFFICULTY DISTRIBUTION: Easy (25%), Medium (50%), Hard (25%) - all at ECET competitive level.
+         
+         For EACH question, provide an EXTREMELY DETAILED explanation suitable for a COMPLETE BEGINNER:
+         - Start with the basic concept/formula/principle
+         - Break down the solution into simple steps
+         - Explain why the correct answer is right with reasoning
+         - Explain why EACH incorrect option is wrong
+         - Use simple, everyday language
+         - Add tips or shortcuts if applicable
+         
+         Mark is_important as true for ALL questions in this batch.`;
+
+      try {
+        const response = await ai.models.generateContent({
+          model: "gemini-3-flash-preview",
+          contents: prompt,
+          config: {
+            responseMimeType: "application/json",
+            responseSchema: questionSchema
+          }
+        });
+
+        const text = response.text;
+        if (text) {
+          const batchQuestions = JSON.parse(text);
+          allQuestions = [...allQuestions, ...batchQuestions];
+        }
+      } catch (error) {
+        console.error(`Error in important pool batch ${i + 1}:`, error);
+        if (allQuestions.length === 0) throw error;
+        break;
+      }
+    }
+
+    // Store in database
+    const questionsWithMetadata = allQuestions.map(q => ({
+      ...q,
+      is_important: true,
+      created_at: new Date()
+    }));
+    
+    await db.collection('static_questions').insertMany(questionsWithMetadata);
+    
+    res.json({ 
+      success: true, 
+      count: questionsWithMetadata.length,
+      subject 
+    });
+  } catch (error: any) {
+    console.error("Important pool generation error:", error);
+    res.status(500).json({ error: "Failed to generate important pool", details: error.message });
+  }
+});
+
+// Test Routes with window tracking
 app.post("/api/tests/save", authenticate, async (req: any, res) => {
-  const { test_type, subject, score, total, duration } = req.body;
+  const { test_type, subject, score, total, duration, windowIndex } = req.body;
   
   await db.collection('test_attempts').insertOne({
     user_id: req.user.id,
@@ -234,8 +329,30 @@ app.post("/api/tests/save", authenticate, async (req: any, res) => {
     score,
     total,
     duration,
+    windowIndex: windowIndex || 0,
     date: new Date()
   });
+  
+  // Update user progress
+  const progress = await db.collection('user_progress').findOne({ user_id: req.user.id });
+  if (progress) {
+    await db.collection('user_progress').updateOne(
+      { user_id: req.user.id },
+      {
+        $set: {
+          total_tests: progress.total_tests + 1,
+          total_score: progress.total_score + score,
+          total_possible: progress.total_possible + total,
+          avg_accuracy: ((progress.total_score + score) / (progress.total_possible + total)) * 100,
+          last_updated: new Date()
+        },
+        $addToSet: {
+          subjects_completed: subject,
+          windows_completed: windowIndex !== undefined ? `${test_type}_${windowIndex}` : null
+        }
+      }
+    );
+  }
   
   res.json({ success: true });
 });
@@ -250,47 +367,44 @@ app.get("/api/tests/history", authenticate, async (req: any, res) => {
   res.json(history);
 });
 
+// NEW: Get user progress
+app.get("/api/progress", authenticate, async (req: any, res) => {
+  const progress = await db.collection('user_progress').findOne({ user_id: req.user.id });
+  res.json(progress || {});
+});
+
+// NEW: Get friends/comparison leaderboard
 app.get("/api/leaderboard", authenticate, async (req: any, res) => {
-  const leaderboard = await db.collection('test_attempts').aggregate([
-    {
-      $group: {
-        _id: "$user_id",
-        tests_taken: { $sum: 1 },
-        total_score: { $sum: "$score" },
-        possible_score: { $sum: "$total" }
-      }
-    },
+  const leaderboard = await db.collection('user_progress').aggregate([
     {
       $lookup: {
         from: "users",
-        localField: "_id",
+        localField: "user_id",
         foreignField: "_id",
-        as: "user"
+        as: "user",
+        pipeline: [
+          { $project: { name: 1, email: 1 } }
+        ]
       }
     },
     {
-      $unwind: "$user"
+      $unwind: { path: "$user", preserveNullAndEmptyArrays: true }
     },
     {
       $project: {
-        id: "$_id",
-        name: "$user.name",
-        tests_taken: 1,
+        user_id: 1,
+        name: { $ifNull: ["$user.name", "Unknown"] },
+        total_tests: 1,
         total_score: 1,
-        possible_score: 1,
-        avg_accuracy: {
-          $round: [
-            { $multiply: [{ $divide: ["$total_score", "$possible_score"] }, 100] },
-            1
-          ]
-        }
+        total_possible: 1,
+        avg_accuracy: 1
       }
     },
     {
       $sort: { avg_accuracy: -1, total_score: -1 }
     },
     {
-      $limit: 10
+      $limit: 50
     }
   ]).toArray();
   
@@ -328,13 +442,18 @@ app.delete("/api/bookmarks/:id", authenticate, async (req: any, res) => {
   res.json({ success: true });
 });
 
-// Static Questions Routes
+// Static Questions Routes (Most Important Questions)
 app.get("/api/questions/important", async (req, res) => {
+  const { subject } = req.query;
+  
+  const query: any = { is_important: true };
+  if (subject && subject !== 'all') {
+    query.subject = subject;
+  }
+  
   const questions = await db.collection('static_questions')
-    .aggregate([
-      { $match: { is_important: true } },
-      { $sample: { size: 20 } }
-    ])
+    .find(query)
+    .limit(200)
     .toArray();
   
   res.json(questions);
@@ -344,7 +463,7 @@ app.get("/api/questions/static/:subject", async (req, res) => {
   const questions = await db.collection('static_questions')
     .aggregate([
       { $match: { subject: req.params.subject } },
-      { $sample: { size: 10 } }
+      { $sample: { size: 30 } }
     ])
     .toArray();
   
@@ -364,14 +483,18 @@ app.get("/api/admin/static-count", async (req, res) => {
     {
       $group: {
         _id: "$subject",
-        count: { $sum: 1 }
+        count: { $sum: 1 },
+        important_count: {
+          $sum: { $cond: [{ $eq: ["$is_important", true] }, 1, 0] }
+        }
       }
     },
     {
       $project: {
         _id: 0,
         subject: "$_id",
-        count: 1
+        count: 1,
+        important_count: 1
       }
     }
   ]).toArray();
@@ -398,7 +521,7 @@ async function startServer() {
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
-    console.log(`📊 Database: MongoDB`);
+    console.log(`📊 Database: MongoDB (${MONGO_DB_NAME})`);
     console.log(`🤖 Gemini AI: Enabled`);
   });
 }
