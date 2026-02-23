@@ -7,7 +7,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import cors from "cors";
-import { GoogleGenAI, Type } from "@google/genai";
+import Groq from "groq-sdk";
 
 dotenv.config();
 
@@ -18,7 +18,7 @@ const __dirname = path.dirname(__filename);
 const MONGO_URL = process.env.MONGO_URL;
 const MONGO_DB_NAME = process.env.MONGO_DB_NAME || 'ecet_platform';
 const JWT_SECRET = process.env.JWT_SECRET;
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const PORT = process.env.PORT || 3000;
 const CORS_ORIGINS = process.env.CORS_ORIGINS || '*';
 
@@ -30,8 +30,8 @@ if (!MONGO_URL) {
   throw new Error('MONGO_URL environment variable is required');
 }
 
-if (!GEMINI_API_KEY) {
-  throw new Error('GEMINI_API_KEY environment variable is required');
+if (!GROQ_API_KEY) {
+  throw new Error('GROQ_API_KEY environment variable is required');
 }
 
 // MongoDB Connection
@@ -58,29 +58,8 @@ async function connectDB() {
   }
 }
 
-// Gemini AI Setup
-const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
-
-const questionSchema = {
-  type: Type.ARRAY,
-  items: {
-    type: Type.OBJECT,
-    properties: {
-      text: { type: Type.STRING, description: "The question text" },
-      options: { 
-        type: Type.ARRAY, 
-        items: { type: Type.STRING },
-        description: "Exactly 4 options"
-      },
-      correctAnswer: { type: Type.INTEGER, description: "Index of correct option (0-3)" },
-      explanation: { type: Type.STRING, description: "Detailed beginner-friendly explanation" },
-      subject: { type: Type.STRING, description: "The subject of the question" },
-      difficulty: { type: Type.STRING, enum: ["Easy", "Medium", "Hard"] },
-      is_important: { type: Type.BOOLEAN, description: "Whether this is a highly probable/important question" }
-    },
-    required: ["text", "options", "correctAnswer", "explanation", "subject", "difficulty", "is_important"]
-  }
-};
+// Groq AI Setup
+const groq = new Groq({ apiKey: GROQ_API_KEY });
 
 const app = express();
 
@@ -152,92 +131,113 @@ app.post("/api/auth/login", async (req, res) => {
   res.json({ token, user: userData });
 });
 
-// NEW: Generate Questions with 200-question support and windowed approach
+// Generate Questions with Groq (200-question support with windowed approach)
 app.post("/api/generate-questions", authenticate, async (req: any, res) => {
   const { subject, count = 30, windowIndex = 0 } = req.body;
   
   try {
-    const batchSize = 25;
     let allQuestions: any[] = [];
-    const batches = Math.ceil(count / batchSize);
-
+    
     // Full Mock Test Distribution (200 questions = 100 MPC + 100 CSE Core)
     // 4 Windows × 50 questions each
-    const getFullMockPrompt = (batchIdx: number, size: number) => {
+    const getFullMockPrompt = (windowIdx: number) => {
       let distribution = "";
-      let sequenceOrder = "";
       
-      if (windowIndex === 0) {
-        // Window 1: 50 questions (Math: 25, Physics: 12, Chemistry: 13)
+      if (windowIdx === 0) {
         distribution = "Math: 25, Physics: 12, Chemistry: 13";
-        sequenceOrder = "1. Mathematics (25 questions), 2. Physics (12 questions), 3. Chemistry (13 questions)";
-      } else if (windowIndex === 1) {
-        // Window 2: 50 questions (Math: 25, Physics: 13, Chemistry: 12)
+      } else if (windowIdx === 1) {
         distribution = "Math: 25, Physics: 13, Chemistry: 12";
-        sequenceOrder = "1. Mathematics (25 questions), 2. Physics (13 questions), 3. Chemistry (12 questions)";
-      } else if (windowIndex === 2) {
-        // Window 3: 50 questions (Programming in C: 10, Data Structures: 10, Digital Electronics: 10, Computer Organization: 10, Operating Systems: 10)
+      } else if (windowIdx === 2) {
         distribution = "Programming in C: 10, Data Structures: 10, Digital Electronics: 10, Computer Organization: 10, Operating Systems: 10";
-        sequenceOrder = "1. Programming in C (10), 2. Data Structures (10), 3. Digital Electronics (10), 4. Computer Organization (10), 5. Operating Systems (10)";
-      } else if (windowIndex === 3) {
-        // Window 4: 50 questions (Database Management Systems: 10, Computer Networks: 10, Programming in C: 10, Data Structures: 10, Operating Systems: 10)
+      } else if (windowIdx === 3) {
         distribution = "Database Management Systems: 10, Computer Networks: 10, Programming in C: 10, Data Structures: 10, Operating Systems: 10";
-        sequenceOrder = "1. DBMS (10), 2. Computer Networks (10), 3. Programming in C (10), 4. Data Structures (10), 5. Operating Systems (10)";
       }
 
-      return `Generate ${size} highly probable and frequently asked multiple-choice questions for the AP ECET 2026 (CSE Branch) exam. 
-         These questions should be strictly at the ECET competitive level.
-         This is Window ${windowIndex + 1} of 4 (Questions ${windowIndex * 50 + 1} to ${(windowIndex + 1) * 50} out of 200 total).
-         Batch ${batchIdx + 1}.
-         
-         SYLLABUS DISTRIBUTION FOR THIS WINDOW: ${distribution}.
-         CRITICAL: You MUST generate the questions in the following SUBJECT SEQUENCE: ${sequenceOrder}.
-         
-         Follow the C-23 Diploma curriculum strictly.
-         DISTRIBUTION: The questions MUST be evenly divided among difficulty levels: Easy (30%), Medium (50%), and Hard (20%) at ECET competitive level.
-         IMPORTANT: Focus on "Most Probable" and "Very Important" questions that are likely to appear in the 2026 exam.
-         For EACH question, provide a step-by-step explanation suitable for a COMPLETE BEGINNER. 
-         Start with basic concepts, explain the solution process, why the correct answer is right, and why each incorrect option is wrong.
-         Use simple language and avoid jargon where possible.`;
+      return `Generate EXACTLY ${count} multiple-choice questions for AP ECET 2026 (CSE Branch) exam.
+Window ${windowIdx + 1} of 4 (Questions ${windowIdx * 50 + 1}-${(windowIdx + 1) * 50} out of 200).
+
+DISTRIBUTION: ${distribution}
+
+CRITICAL REQUIREMENTS:
+- Generate questions in SUBJECT SEQUENCE (all Math together, then Physics, etc.)
+- ECET competitive level difficulty
+- Easy (30%), Medium (50%), Hard (20%)
+- Follow C-23 Diploma curriculum strictly
+- Mark most probable questions as is_important: true
+
+For EACH question provide:
+- Clear question text
+- 4 options (array of strings)
+- correctAnswer (index 0-3)
+- DETAILED explanation for COMPLETE BEGINNERS:
+  * Start with basic concept/formula
+  * Step-by-step solution
+  * Why correct answer is right
+  * Why each wrong answer is incorrect
+  * Use simple language, avoid jargon
+- subject (exact subject name)
+- difficulty (Easy/Medium/Hard)
+
+Return ONLY valid JSON array of question objects. No extra text.`;
     };
 
-    for (let i = 0; i < batches; i++) {
-      const currentBatchSize = Math.min(batchSize, count - allQuestions.length);
-      if (currentBatchSize <= 0) break;
+    const subjectPrompt = `Generate EXACTLY ${count} multiple-choice questions for "${subject}" for AP ECET 2026 (CSE Branch).
 
-      const prompt = subject === 'Full' 
-        ? getFullMockPrompt(i, currentBatchSize)
-        : `Generate ${currentBatchSize} highly probable and frequently asked multiple-choice questions for the subject "${subject}" specifically for AP ECET 2026 (CSE Branch) preparation.
-           These questions should be strictly at the ECET competitive level, focusing on core concepts and common problem patterns found in previous years' papers.
-           This is batch ${i + 1} of ${batches}. Generate 30 questions total for subject-wise tests.
-           Follow the C-23 Diploma curriculum strictly.
-           DISTRIBUTION: Easy (30%), Medium (50%), Hard (20%) at ECET level.
-           IMPORTANT: Focus on "Most Probable" and "Very Important" questions that are likely to appear in the 2026 exam.
-           For EACH question, provide a step-by-step explanation suitable for a COMPLETE BEGINNER. 
-           Start with basic concepts, explain the solution process clearly, why the correct answer is right, and why each incorrect option is wrong.
-           Use simple, easy-to-understand language. Avoid complex jargon. Think of explaining to someone learning the concept for the first time.`;
+REQUIREMENTS:
+- ECET competitive level
+- Easy (30%), Medium (50%), Hard (20%)
+- C-23 Diploma curriculum
+- Most probable/important questions
+- Mark critical questions as is_important: true
 
-      try {
-        const response = await ai.models.generateContent({
-          model: "gemini-3-flash-preview",
-          contents: prompt,
-          config: {
-            responseMimeType: "application/json",
-            responseSchema: questionSchema
-          }
-        });
+For EACH question provide:
+- Clear question text
+- 4 options (array of strings)  
+- correctAnswer (index 0-3)
+- DETAILED BEGINNER-FRIENDLY explanation:
+  * Basic concept first
+  * Step-by-step solution
+  * Why correct answer is right
+  * Why wrong answers are incorrect
+  * Simple language
+- subject: "${subject}"
+- difficulty: Easy/Medium/Hard
 
-        const text = response.text;
-        if (text) {
-          const batchQuestions = JSON.parse(text);
-          allQuestions = [...allQuestions, ...batchQuestions];
+Return ONLY valid JSON array. Format:
+[{
+  "text": "question",
+  "options": ["opt1", "opt2", "opt3", "opt4"],
+  "correctAnswer": 0,
+  "explanation": "detailed explanation",
+  "subject": "${subject}",
+  "difficulty": "Medium",
+  "is_important": false
+}]`;
+
+    const prompt = subject === 'Full' ? getFullMockPrompt(windowIndex) : subjectPrompt;
+
+    const completion = await groq.chat.completions.create({
+      messages: [
+        {
+          role: "system",
+          content: "You are an expert ECET exam question generator. Generate only valid JSON arrays of questions. No markdown, no extra text."
+        },
+        {
+          role: "user",
+          content: prompt
         }
-      } catch (error) {
-        console.error(`Error in batch ${i + 1}:`, error);
-        if (allQuestions.length === 0) throw error;
-        break;
-      }
-    }
+      ],
+      model: "llama-3.3-70b-versatile",
+      temperature: 0.8,
+      max_tokens: 8000,
+      response_format: { type: "json_object" }
+    });
+
+    const responseText = completion.choices[0]?.message?.content || "{}";
+    const parsed = JSON.parse(responseText);
+    
+    // Handle both array and object with questions array
+    allQuestions = Array.isArray(parsed) ? parsed : (parsed.questions || []);
 
     res.json(allQuestions.slice(0, count));
   } catch (error: any) {
@@ -246,56 +246,70 @@ app.post("/api/generate-questions", authenticate, async (req: any, res) => {
   }
 });
 
-// NEW: Generate and store "Most Important Questions" static pool
+// Generate "Most Important Questions" static pool
 app.post("/api/admin/generate-important-pool", async (req, res) => {
   const { subject, count = 200 } = req.body;
   
   try {
-    const batchSize = 25;
     let allQuestions: any[] = [];
+    const batchSize = 50;
     const batches = Math.ceil(count / batchSize);
 
     for (let i = 0; i < batches; i++) {
-      const currentBatchSize = Math.min(batchSize, count - allQuestions.length);
-      if (currentBatchSize <= 0) break;
+      const currentSize = Math.min(batchSize, count - allQuestions.length);
+      
+      const prompt = `Generate EXACTLY ${currentSize} MOST IMPORTANT multiple-choice questions for "${subject}" - AP ECET 2026 (CSE Branch).
 
-      const prompt = `Generate ${currentBatchSize} HIGHLY PROBABLE and VERY IMPORTANT multiple-choice questions for the subject "${subject}" specifically for AP ECET 2026 (CSE Branch) exam.
-         These are the MOST IMPORTANT questions that are HIGHLY LIKELY to appear in the actual exam.
-         Focus on frequently asked topics, common problem patterns, and critical concepts from C-23 Diploma curriculum.
-         This is batch ${i + 1} of ${batches} for building a static pool of 200+ most important questions.
-         
-         DIFFICULTY DISTRIBUTION: Easy (25%), Medium (50%), Hard (25%) - all at ECET competitive level.
-         
-         For EACH question, provide an EXTREMELY DETAILED explanation suitable for a COMPLETE BEGINNER:
-         - Start with the basic concept/formula/principle
-         - Break down the solution into simple steps
-         - Explain why the correct answer is right with reasoning
-         - Explain why EACH incorrect option is wrong
-         - Use simple, everyday language
-         - Add tips or shortcuts if applicable
-         
-         Mark is_important as true for ALL questions in this batch.`;
+These are HIGHLY PROBABLE questions that will likely appear in the actual exam.
 
-      try {
-        const response = await ai.models.generateContent({
-          model: "gemini-3-flash-preview",
-          contents: prompt,
-          config: {
-            responseMimeType: "application/json",
-            responseSchema: questionSchema
+REQUIREMENTS:
+- ECET competitive level
+- Most frequently asked topics
+- Critical concepts from C-23 curriculum
+- Easy (25%), Medium (50%), Hard (25%)
+- ALL questions must have is_important: true
+
+DETAILED explanations for COMPLETE BEGINNERS:
+- Basic concept/formula first
+- Step-by-step solution breakdown
+- Why correct answer is right
+- Why EACH incorrect option is wrong
+- Simple everyday language
+- Tips/shortcuts if applicable
+
+Return ONLY valid JSON array:
+[{
+  "text": "question",
+  "options": ["opt1", "opt2", "opt3", "opt4"],
+  "correctAnswer": 0,
+  "explanation": "extremely detailed beginner explanation",
+  "subject": "${subject}",
+  "difficulty": "Medium",
+  "is_important": true
+}]`;
+
+      const completion = await groq.chat.completions.create({
+        messages: [
+          {
+            role: "system",
+            content: "You are an expert ECET exam question generator. Generate only valid JSON arrays. No markdown."
+          },
+          {
+            role: "user",
+            content: prompt
           }
-        });
+        ],
+        model: "llama-3.3-70b-versatile",
+        temperature: 0.7,
+        max_tokens: 8000,
+        response_format: { type: "json_object" }
+      });
 
-        const text = response.text;
-        if (text) {
-          const batchQuestions = JSON.parse(text);
-          allQuestions = [...allQuestions, ...batchQuestions];
-        }
-      } catch (error) {
-        console.error(`Error in important pool batch ${i + 1}:`, error);
-        if (allQuestions.length === 0) throw error;
-        break;
-      }
+      const responseText = completion.choices[0]?.message?.content || "{}";
+      const parsed = JSON.parse(responseText);
+      const batchQuestions = Array.isArray(parsed) ? parsed : (parsed.questions || []);
+      
+      allQuestions = [...allQuestions, ...batchQuestions];
     }
 
     // Store in database
@@ -367,13 +381,11 @@ app.get("/api/tests/history", authenticate, async (req: any, res) => {
   res.json(history);
 });
 
-// NEW: Get user progress
 app.get("/api/progress", authenticate, async (req: any, res) => {
   const progress = await db.collection('user_progress').findOne({ user_id: req.user.id });
   res.json(progress || {});
 });
 
-// NEW: Get friends/comparison leaderboard
 app.get("/api/leaderboard", authenticate, async (req: any, res) => {
   const leaderboard = await db.collection('user_progress').aggregate([
     {
@@ -442,7 +454,7 @@ app.delete("/api/bookmarks/:id", authenticate, async (req: any, res) => {
   res.json({ success: true });
 });
 
-// Static Questions Routes (Most Important Questions)
+// Static Questions Routes
 app.get("/api/questions/important", async (req, res) => {
   const { subject } = req.query;
   
@@ -522,7 +534,7 @@ async function startServer() {
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
     console.log(`📊 Database: MongoDB (${MONGO_DB_NAME})`);
-    console.log(`🤖 Gemini AI: Enabled`);
+    console.log(`🤖 AI: Groq (Llama 3.3 70B)`);
   });
 }
 
