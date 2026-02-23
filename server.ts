@@ -7,6 +7,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import serverless from "serverless-http";
+import { GoogleGenAI, Type } from "@google/genai";
 
 dotenv.config();
 
@@ -21,6 +22,34 @@ if (!supabaseUrl || !supabaseKey) {
 }
 
 const db = createClient(supabaseUrl || "", supabaseKey || "");
+
+// AI Initialization
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+let genAI: any = null;
+if (GEMINI_API_KEY) {
+  genAI = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+}
+
+const questionSchema = {
+  type: Type.ARRAY,
+  items: {
+    type: Type.OBJECT,
+    properties: {
+      text: { type: Type.STRING, description: "The question text" },
+      options: {
+        type: Type.ARRAY,
+        items: { type: Type.STRING },
+        description: "Exactly 4 options"
+      },
+      correctAnswer: { type: Type.INTEGER, description: "Index of correct option (0-3)" },
+      explanation: { type: Type.STRING, description: "Detailed beginner-friendly explanation" },
+      subject: { type: Type.STRING, description: "The subject of the question" },
+      difficulty: { type: Type.STRING, description: "Easy, Medium, or Hard" },
+      is_important: { type: Type.BOOLEAN, description: "Whether this is a highly probable question" }
+    },
+    required: ["text", "options", "correctAnswer", "explanation", "subject", "difficulty", "is_important"]
+  }
+};
 
 const app = express();
 app.use(express.json());
@@ -43,6 +72,7 @@ const authenticate = (req: any, res: any, next: any) => {
 // Auth Routes
 app.post("/api/auth/register", async (req, res) => {
   const { name, email, password } = req.body;
+  console.log(`[Auth] Register attempt: ${email}`);
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
     const { data, error } = await db
@@ -54,8 +84,10 @@ app.post("/api/auth/register", async (req, res) => {
     if (error) throw error;
 
     const token = jwt.sign({ id: data.id, name, email }, JWT_SECRET);
+    console.log(`[Auth] Register success: ${email}`);
     res.json({ token, user: { id: data.id, name, email } });
   } catch (err: any) {
+    console.error(`[Auth] Register error: ${email}`, err);
     if (err.message?.includes("unique_email") || err.code === "23505") {
       res.status(400).json({ error: "Email already exists" });
     } else {
@@ -67,6 +99,7 @@ app.post("/api/auth/register", async (req, res) => {
 
 app.post("/api/auth/login", async (req, res) => {
   const { email, password } = req.body;
+  console.log(`[Auth] Login attempt: ${email}`);
   const { data: user, error } = await db
     .from("users")
     .select("*")
@@ -77,7 +110,76 @@ app.post("/api/auth/login", async (req, res) => {
     return res.status(401).json({ error: "Invalid credentials" });
   }
   const token = jwt.sign({ id: user.id, name: user.name, email: user.email }, JWT_SECRET);
+  console.log(`[Auth] Login success: ${email}`);
   res.json({ token, user: { id: user.id, name: user.name, email: user.email } });
+});
+
+app.get("/api/health", (req, res) => {
+  res.json({
+    ai: !!genAI,
+    supabase: !!db,
+    env: {
+      has_key: !!process.env.GEMINI_API_KEY,
+      node_env: process.env.NODE_ENV
+    }
+  });
+});
+
+// AI Routes
+app.post("/api/ai/generate", authenticate, async (req: any, res) => {
+  if (!genAI) return res.status(503).json({ error: "AI Engine not configured" });
+
+  const { subject, count, windowIndex } = req.body;
+  const model = genAI.getGenerativeModel({
+    model: "gemini-1.5-flash",
+    generationConfig: {
+      responseMimeType: "application/json",
+      responseSchema: questionSchema,
+    },
+  });
+
+  const getFullMockPrompt = (wIdx: number) => {
+    let distribution = "";
+    let sequenceOrder = "";
+    if (wIdx === 0) {
+      distribution = "Math: 12, Physics: 6, Chemistry: 6, CSE (Digital Electronics: 6, Software Eng: 6, CO: 8, Data Structures: 4)";
+      sequenceOrder = "1. Math, 2. Physics, 3. Chemistry, 4. Digital Electronics, 5. Software Eng, 6. Computer Organization, 7. Data Structures";
+    } else if (wIdx === 1) {
+      distribution = "Math: 13, Physics: 6, Chemistry: 6, CSE (Data Structures: 6, Computer Networks: 6, OS: 7)";
+      sequenceOrder = "1. Math, 2. Physics, 3. Chemistry, 4. Data Structures, 5. Computer Networks, 6. Operating Systems";
+    } else if (wIdx === 2) {
+      distribution = "Math: 12, Physics: 6, Chemistry: 6, CSE (OS: 3, DBMS: 8, Java: 7)";
+      sequenceOrder = "1. Math, 2. Physics, 3. Chemistry, 4. Operating Systems, 5. DBMS, 6. Java/Programming";
+    } else if (wIdx === 3) {
+      distribution = "Math: 13, Physics: 7, Chemistry: 7, CSE (Java: 3, Web Tech: 8, Big Data: 6, Android: 6, IoT: 8, Python: 8)";
+      sequenceOrder = "1. Math, 2. Physics, 3. Chemistry, 4. Java, 5. Web Tech, 6. Big Data, 7. Android, 8. IoT, 9. Python";
+    }
+
+    return `Generate exactly ${count} highly probable and frequently asked multiple-choice questions for the AP ECET 2026 (CSE Branch) exam. 
+       These questions should be strictly at the ECET competitive level.
+       Window ${wIdx + 1} (Questions ${wIdx * 50 + 1} to ${(wIdx + 1) * 50}).
+       SYLLABUS DISTRIBUTION: ${distribution}.
+       SUBJECT SEQUENCE: ${sequenceOrder}.
+       Follow C-23 Diploma curriculum. 
+       Mix difficulty: Easy, Medium, Hard.
+       Provide step-by-step explanations for beginners.`;
+  };
+
+  const prompt = subject === 'Full'
+    ? getFullMockPrompt(windowIndex)
+    : `Generate exactly ${count} highly probable multiple-choice questions for "${subject}" for AP ECET 2026 (CSE). 
+       ECET level, C-23 curriculum. Mix difficulty. Provide beginner explanations.`;
+
+  try {
+    console.log(`[AI] Generating ${count} questions for: ${subject}`);
+    const result = await model.generateContent(prompt);
+    const questions = JSON.parse(result.response.text());
+    console.log(`[AI] Generation success: ${questions.length || 0} questions`);
+    res.json(questions);
+  } catch (err) {
+    console.error(`[AI] Generation error for ${subject}:`, err);
+    res.status(500).json({ error: "AI Generation failed" });
+  }
 });
 
 // Test Routes

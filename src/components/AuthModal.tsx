@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Mail, Lock, User as UserIcon, ArrowRight } from 'lucide-react';
+import { X, Mail, Lock, User as UserIcon, ArrowRight, ShieldCheck } from 'lucide-react';
 import { api } from '../services/api';
 import { User } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
@@ -18,112 +18,155 @@ export default function AuthModal({ isOpen, onClose, onLogin }: AuthModalProps) 
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  if (!isOpen) return null;
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
     try {
-      const res = isLogin 
+      const res = isLogin
         ? await api.auth.login({ email, password })
         : await api.auth.register({ name, email, password });
-      
+
       onLogin(res.user, res.token);
       onClose();
     } catch (err: any) {
-      setError(err.message || 'Authentication failed');
+      setError(err.message || 'Authentication sequence failed. Check credentials.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden relative"
-      >
-        <button 
-          onClick={onClose}
-          className="absolute top-6 right-6 text-slate-400 hover:text-slate-600 transition-colors"
-        >
-          <X className="h-6 w-6" />
-        </button>
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6 overflow-y-auto pointer-events-auto">
+          {/* Backdrop - use absolute instead of fixed to stay within parent stacking context */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="absolute inset-0 bg-black/80 backdrop-blur-md cursor-pointer"
+          />
 
-        <div className="p-8 sm:p-10">
-          <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold text-slate-900 mb-2">
-              {isLogin ? 'Welcome Back' : 'Join the Platform'}
-            </h2>
-            <p className="text-slate-500">
-              {isLogin ? 'Sign in to continue your preparation' : 'Create an account to start your journey'}
-            </p>
-          </div>
+          {/* Modal Content - add relative and z-10 to ensure it's on top of backdrop */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, y: 40 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: 40 }}
+            className="glass-panel w-full max-w-[480px] rounded-[3rem] overflow-hidden relative z-10 shadow-[0_0_100px_-20px_rgba(99,102,241,0.2)]"
+          >
+            <button
+              onClick={onClose}
+              className="absolute top-8 right-8 text-white/20 hover:text-white transition-colors z-20"
+            >
+              <X className="h-6 w-6" />
+            </button>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {!isLogin && (
-              <div className="relative">
-                <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="Full Name"
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all outline-none"
-                />
+            <div className="p-10 md:p-14">
+              <div className="text-center mb-12 space-y-4">
+                <div className="inline-flex p-3 bg-indigo-500/10 rounded-2xl mb-4">
+                  <ShieldCheck className="h-6 w-6 text-indigo-400" />
+                </div>
+                <h2 className="text-4xl font-black text-white tracking-tighter uppercase">
+                  {isLogin ? 'Access the Grid' : 'System Enroll'}
+                </h2>
+                <p className="text-white/30 font-light tracking-tight">
+                  {isLogin ? 'Initialize your candidate profile' : 'Create a new core identity'}
+                </p>
               </div>
-            )}
 
-            <div className="relative">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-              <input
-                type="email"
-                placeholder="Email Address"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all outline-none"
-              />
+              <form onSubmit={handleSubmit} className="space-y-5">
+                {!isLogin && (
+                  <AuthInput
+                    icon={<UserIcon className="h-5 w-5" />}
+                    type="text"
+                    placeholder="Candidate Name"
+                    value={name}
+                    onChange={(e: any) => setName(e.target.value)}
+                    required
+                  />
+                )}
+
+                <AuthInput
+                  icon={<Mail className="h-5 w-5" />}
+                  type="email"
+                  placeholder="Network Email"
+                  value={email}
+                  onChange={(e: any) => setEmail(e.target.value)}
+                  required
+                />
+
+                <AuthInput
+                  icon={<Lock className="h-5 w-5" />}
+                  type="password"
+                  placeholder="Security Key"
+                  value={password}
+                  onChange={(e: any) => setPassword(e.target.value)}
+                  required
+                />
+
+                {error && (
+                  <motion.p
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="text-red-400 text-xs font-black tracking-widest uppercase text-center py-2"
+                  >
+                    {error}
+                  </motion.p>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-white text-black py-5 rounded-[1.5rem] font-black text-sm tracking-[0.2em] uppercase hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-white/5 flex items-center justify-center gap-3 disabled:opacity-50 mt-4"
+                >
+                  {loading ? (
+                    <div className="flex items-center gap-3">
+                      <div className="h-4 w-4 border-2 border-black/20 border-t-black rounded-full animate-spin" />
+                      SECURE LOGGING...
+                    </div>
+                  ) : (
+                    <>
+                      {isLogin ? 'Establish Link' : 'Finalize Registry'}
+                      <ArrowRight className="h-4 w-4" />
+                    </>
+                  )}
+                </button>
+              </form>
+
+              <div className="mt-12 text-center">
+                <button
+                  disabled={loading}
+                  type="button"
+                  onClick={() => {
+                    setIsLogin(!isLogin);
+                    setError('');
+                  }}
+                  className="text-indigo-400 text-[10px] font-black tracking-[0.3em] uppercase hover:text-white transition-colors"
+                >
+                  {isLogin ? 'No identity? Register' : 'Existing profile? Sign in'}
+                </button>
+              </div>
             </div>
-
-            <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-              <input
-                type="password"
-                placeholder="Password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all outline-none"
-              />
-            </div>
-
-            {error && <p className="text-red-500 text-sm font-medium">{error}</p>}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 flex items-center justify-center gap-2 disabled:opacity-50"
-            >
-              {loading ? 'Processing...' : isLogin ? 'Sign In' : 'Create Account'}
-              {!loading && <ArrowRight className="h-5 w-5" />}
-            </button>
-          </form>
-
-          <div className="mt-8 text-center">
-            <button
-              onClick={() => setIsLogin(!isLogin)}
-              className="text-indigo-600 font-semibold hover:underline"
-            >
-              {isLogin ? "Don't have an account? Sign Up" : "Already have an account? Sign In"}
-            </button>
-          </div>
+          </motion.div>
         </div>
-      </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+function AuthInput({ icon, ...props }: any) {
+  return (
+    <div className="relative group">
+      <div className="absolute left-6 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-indigo-400 transition-colors pointer-events-none z-10">
+        {icon}
+      </div>
+      <input
+        {...props}
+        className="w-full pl-16 pr-6 py-5 bg-white/[0.03] border border-white/5 rounded-2xl text-white placeholder:text-white/20 focus:bg-white/[0.05] focus:border-indigo-500/50 outline-none transition-all font-light tracking-tight relative z-0"
+      />
     </div>
   );
 }

@@ -92,4 +92,18 @@ export const api = {
       return res.json();
     },
   },
+  ai: {
+    generate: async (data: { subject: string; count: number; windowIndex?: number }) => {
+      const res = await fetch(`${API_BASE}/ai/generate`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || `AI Generation failed (Status: ${res.status})`);
+      }
+      return res.json();
+    }
+  }
 };
