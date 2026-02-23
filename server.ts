@@ -16,6 +16,7 @@ const __dirname = path.dirname(__filename);
 
 // Environment Variables with Validation
 const MONGO_URL = process.env.MONGO_URL;
+const MONGO_DB_NAME = process.env.MONGO_DB_NAME || 'ecet_platform';
 const JWT_SECRET = process.env.JWT_SECRET;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const PORT = process.env.PORT || 3000;
@@ -40,7 +41,7 @@ let db: any;
 async function connectDB() {
   try {
     await client.connect();
-    db = client.db("ecet_platform");
+    db = client.db(MONGO_DB_NAME);
     console.log("✅ Connected to MongoDB");
     
     // Create indexes
