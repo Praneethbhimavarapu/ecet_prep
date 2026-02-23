@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { User, Question } from '../types';
 import { api } from '../services/api';
 import { 
@@ -14,10 +14,8 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { motion } from 'motion/react';
-import AuthModal from './AuthModal';
 
-export default function LandingPage({ onLogin }: { onLogin: (user: User, token: string) => void }) {
-  const [isAuthOpen, setIsAuthOpen] = useState(false);
+export default function LandingPage({ onLogin, onOpenAuth }: { onLogin: (user: User, token: string) => void, onOpenAuth: () => void }) {
   const [impQuestions, setImpQuestions] = useState<Question[]>([]);
 
   useEffect(() => {
@@ -63,7 +61,7 @@ export default function LandingPage({ onLogin }: { onLogin: (user: User, token: 
           className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-8"
         >
           <button
-            onClick={() => setIsAuthOpen(true)}
+            onClick={onOpenAuth}
             className="w-full sm:w-auto bg-white text-black px-12 py-5 rounded-full font-black text-sm hover:scale-105 transition-all flex items-center justify-center gap-3 group tracking-widest uppercase"
           >
             Get Started
@@ -108,7 +106,7 @@ export default function LandingPage({ onLogin }: { onLogin: (user: User, token: 
               <p className="text-white/40 font-light">Highly probable questions curated for AP ECET 2026 success.</p>
             </div>
             <button 
-              onClick={() => setIsAuthOpen(true)}
+              onClick={onOpenAuth}
               className="text-white/60 font-bold text-[10px] uppercase tracking-widest flex items-center gap-2 hover:text-white transition-all"
             >
               Explore Full Bank <ChevronRight className="h-4 w-4" />
@@ -134,7 +132,7 @@ export default function LandingPage({ onLogin }: { onLogin: (user: User, token: 
                   {q.text}
                 </p>
                 <button 
-                  onClick={() => setIsAuthOpen(true)}
+                  onClick={onOpenAuth}
                   className="w-full py-4 bg-white/5 text-white/40 rounded-2xl text-[10px] uppercase tracking-widest font-bold group-hover:bg-white group-hover:text-black transition-all"
                 >
                   Reveal Explanation
@@ -204,11 +202,6 @@ export default function LandingPage({ onLogin }: { onLogin: (user: User, token: 
         </div>
       </section>
 
-      <AuthModal 
-        isOpen={isAuthOpen} 
-        onClose={() => setIsAuthOpen(false)} 
-        onLogin={onLogin} 
-      />
     </div>
   );
 }

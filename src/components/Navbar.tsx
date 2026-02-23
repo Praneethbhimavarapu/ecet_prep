@@ -2,16 +2,15 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { User } from '../types';
 import { BookOpen, LogOut, User as UserIcon, Menu, X, Bookmark } from 'lucide-react';
-import AuthModal from './AuthModal';
 
 interface NavbarProps {
   user: User | null;
   onLogout: () => void;
   onLogin: (user: User, token: string) => void;
+  onOpenAuth: () => void;
 }
 
-export default function Navbar({ user, onLogout, onLogin }: NavbarProps) {
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+export default function Navbar({ user, onLogout, onLogin, onOpenAuth }: NavbarProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const navigate = useNavigate();
 
@@ -53,7 +52,7 @@ export default function Navbar({ user, onLogout, onLogin }: NavbarProps) {
               </>
             ) : (
               <button
-                onClick={() => setIsAuthModalOpen(true)}
+                onClick={onOpenAuth}
                 className="bg-white text-black px-8 py-2.5 rounded-full font-bold text-sm hover:bg-white/90 transition-all"
               >
                 SIGN IN
@@ -62,7 +61,7 @@ export default function Navbar({ user, onLogout, onLogin }: NavbarProps) {
           </div>
 
           <div className="md:hidden flex items-center">
-            <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="text-slate-600">
+            <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="text-white/40 hover:text-white transition-colors">
               {isMenuOpen ? <X /> : <Menu />}
             </button>
           </div>
@@ -85,7 +84,7 @@ export default function Navbar({ user, onLogout, onLogin }: NavbarProps) {
             </>
           ) : (
             <button
-              onClick={() => { setIsAuthModalOpen(true); setIsMenuOpen(false); }}
+              onClick={() => { onOpenAuth(); setIsMenuOpen(false); }}
               className="w-full bg-white text-black py-4 rounded-full font-black text-[10px] uppercase tracking-widest"
             >
               Sign In
@@ -93,12 +92,6 @@ export default function Navbar({ user, onLogout, onLogin }: NavbarProps) {
           )}
         </div>
       )}
-
-      <AuthModal
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
-        onLogin={onLogin}
-      />
     </nav>
   );
 }

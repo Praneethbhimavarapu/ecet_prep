@@ -27,44 +27,29 @@ const questionSchema = {
 export async function generateQuestions(
   subject: Subject | 'Full', 
   count: number = 30, 
-  windowIndex: number = 0
+  windowIndex: number = 0,
+  onBatchGenerated?: (questions: Question[]) => void
 ): Promise<Question[]> {
   const model = "gemini-3-flash-preview";
-  const batchSize = 25; 
+  const batchSize = 10; // Smaller batch size for progressive loading
   let allQuestions: Question[] = [];
 
-  // Distribution logic for Full Mock Test (200 questions total, 50 per window)
-  // We ensure subject-wise sequencing by specifying the order in the prompt for each window.
-  const getFullMockPrompt = (batchIdx: number, size: number) => {
+  const getFullMockPrompt = (batchIdx: number, size: number, startIdx: number) => {
+    // Distribution logic for Full Mock Test (200 questions total)
+    // We adjust distribution based on the global index (startIdx)
     let distribution = "";
-    let sequenceOrder = "";
-    if (windowIndex === 0) {
-      distribution = "Math: 12, Physics: 6, Chemistry: 6, CSE (Digital Electronics: 6, Software Eng: 6, CO: 8, Data Structures: 4)";
-      sequenceOrder = "1. Math, 2. Physics, 3. Chemistry, 4. Digital Electronics, 5. Software Eng, 6. Computer Organization, 7. Data Structures";
-    } else if (windowIndex === 1) {
-      distribution = "Math: 13, Physics: 6, Chemistry: 6, CSE (Data Structures: 6, Computer Networks: 6, OS: 7)";
-      sequenceOrder = "1. Math, 2. Physics, 3. Chemistry, 4. Data Structures, 5. Computer Networks, 6. Operating Systems";
-    } else if (windowIndex === 2) {
-      distribution = "Math: 12, Physics: 6, Chemistry: 6, CSE (OS: 3, DBMS: 8, Java: 7)";
-      sequenceOrder = "1. Math, 2. Physics, 3. Chemistry, 4. Operating Systems, 5. DBMS, 6. Java/Programming";
-    } else if (windowIndex === 3) {
-      distribution = "Math: 13, Physics: 7, Chemistry: 7, CSE (Java: 3, Web Tech: 8, Big Data: 6, Android: 6, IoT: 8, Python: 8)";
-      sequenceOrder = "1. Math, 2. Physics, 3. Chemistry, 4. Java, 5. Web Tech, 6. Big Data, 7. Android, 8. IoT, 9. Python";
-    }
+    if (startIdx < 50) distribution = "Math, Physics, Chemistry";
+    else if (startIdx < 100) distribution = "Digital Electronics, Software Eng, CO, Data Structures";
+    else if (startIdx < 150) distribution = "Data Structures, Computer Networks, OS, DBMS";
+    else distribution = "Java, Web Tech, Big Data, Android, IoT, Python";
 
     return `Generate ${size} highly probable and frequently asked multiple-choice questions for the AP ECET 2026 (CSE Branch) exam. 
-       These questions should be strictly at the ECET competitive level.
-       This is Window ${windowIndex + 1} (Questions ${windowIndex * 50 + 1} to ${(windowIndex + 1) * 50}).
-       Batch ${batchIdx + 1}.
-       
-       SYLLABUS DISTRIBUTION FOR THIS WINDOW: ${distribution}.
-       CRITICAL: You MUST generate the questions in the following SUBJECT SEQUENCE: ${sequenceOrder}.
-       
+       Focus on: ${distribution}.
+       This is Batch ${batchIdx + 1} for global question range ${startIdx + 1} to ${startIdx + size}.
        Follow the C-23 Diploma curriculum strictly.
-       DISTRIBUTION: The questions MUST be evenly divided among difficulty levels: Easy, Medium, and Hard (ECET-level).
-       IMPORTANT: Focus on "Most Probable" and "Very Important" questions that are likely to appear in the 2026 exam.
-       For EACH question, provide a step-by-step explanation suitable for a COMPLETE BEGINNER. 
-       Explain the concept simply, why the correct answer is right, and why the other options are incorrect.`;
+       DISTRIBUTION: Mix of Easy, Medium, and Hard.
+       IMPORTANT: Focus on "Most Probable" and "Very Important" questions.
+       For EACH question, provide a step-by-step explanation.`;
   };
 
   const batches = Math.ceil(count / batchSize);
@@ -73,16 +58,14 @@ export async function generateQuestions(
     const currentBatchSize = Math.min(batchSize, count - allQuestions.length);
     if (currentBatchSize <= 0) break;
 
+    const startIdx = (windowIndex * 50) + allQuestions.length;
     const prompt = subject === 'Full' 
-      ? getFullMockPrompt(i, currentBatchSize)
-      : `Generate ${currentBatchSize} highly probable and frequently asked multiple-choice questions for the subject "${subject}" specifically for AP ECET 2026 (CSE Branch) preparation.
-         These questions should be strictly at the ECET competitive level, focusing on core concepts and common problem patterns found in previous years' papers.
+      ? getFullMockPrompt(i, currentBatchSize, startIdx)
+      : `Generate ${currentBatchSize} highly probable questions for "${subject}" for AP ECET 2026 (CSE Branch).
+         Difficulty: Mix of Easy, Medium, Hard.
          This is batch ${i + 1} of ${batches}.
-         Follow the C-23 Diploma curriculum strictly.
-         DISTRIBUTION: The questions MUST be evenly divided among difficulty levels: Easy, Medium, and Hard (ECET-level).
-         IMPORTANT: Focus on "Most Probable" and "Very Important" questions that are likely to appear in the 2026 exam.
-         For EACH question, provide a step-by-step explanation suitable for a COMPLETE BEGINNER. 
-         Explain the concept simply, why the correct answer is right, and why the other options are incorrect.`;
+         Follow C-23 Diploma curriculum.
+         Provide step-by-step explanations.`;
 
     try {
       const response = await ai.models.generateContent({
@@ -98,6 +81,9 @@ export async function generateQuestions(
       if (text) {
         const batchQuestions = JSON.parse(text);
         allQuestions = [...allQuestions, ...batchQuestions];
+        if (onBatchGenerated) {
+          onBatchGenerated(batchQuestions);
+        }
       }
     } catch (error) {
       console.error(`Error in batch ${i + 1}:`, error);
